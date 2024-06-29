@@ -1,0 +1,20 @@
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\Core 2D C#.exe
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\Core 2D C#.deps.json
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\Core 2D C#.runtimeconfig.json
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\Core 2D C#.dll
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\Core 2D C#.pdb
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\Core 2D CLI Wrapper.dll
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\Core 2D CLI Wrapper.pdb
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.csproj.AssemblyReference.cache
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.AssemblyInfoInputs.cache
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.AssemblyInfo.cs
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.csproj.CoreCompileInputs.cache
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.csproj.Up2Date
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.dll
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\refint\Core 2D C#.dll
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.pdb
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\Core 2D C#.genruntimeconfig.cache
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\obj\Debug\net8.0\ref\Core 2D C#.dll
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\ball.png
+C:\Users\cicel\OneDrive\Documents\Core 2D C#\Core 2D C#\bin\Debug\net8.0\AtxMedia Logo Discord.jpg
