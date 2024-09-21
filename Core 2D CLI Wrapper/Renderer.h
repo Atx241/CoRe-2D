@@ -6,8 +6,7 @@
 #include "ShaderLoader.h"
 #include <vector>
 #include <msclr/marshal_cppstd.h>
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <functional>
 using namespace System::Collections::Generic;
 namespace Core {
 	public ref struct Vector2 {
@@ -81,19 +80,16 @@ namespace Core {
 		unsigned int dataBuffer;
 		int width;
 		int height;
+		static Texture^ CreateTexture(array<unsigned char>^ data, int width, int height, bool linear) {
+			pin_ptr<unsigned char> dt = &data[0];
+			return createTexture(dt, width, height, GL_RGBA, linear);
+		}
 		static Texture^ CreateTexture(array<unsigned char>^ data, int width, int height) {
 			pin_ptr<unsigned char> dt = &data[0];
-			return createTexture(dt, width, height, GL_RGBA);
-		}
-		static Texture^ CreateTexture(System::String^ path) {
-			int width, height, channels;
-			std::string _path = msclr::interop::marshal_as<std::string>(path);
-			unsigned char* data = stbi_load("ball.png", &width, &height, &channels, 0);
-			if (!(channels == 3 || channels == 4)) throw "Bad channel count";
-			return createTexture(data, width, height,channels == 4 ? GL_RGBA : GL_RGB);
+			return createTexture(dt, width, height, GL_RGBA, true);
 		}
 	private:
-		static Texture^ createTexture(unsigned char* data, int width, int height, int format) {
+		static Texture^ createTexture(unsigned char* data, int width, int height, int format, bool linear) {
 			//Creating buffer variable
 			unsigned int tbo;
 			//Generating and binding buffer
@@ -102,8 +98,8 @@ namespace Core {
 			//Applying texture parameters
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, linear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, linear ? GL_LINEAR : GL_NEAREST);
 			//Assigning data and generating mipmaps
 			glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 			glGenerateMipmap(GL_TEXTURE_2D);
@@ -198,11 +194,11 @@ namespace Core {
 			return entity;
 		}
 	};
-	public ref class Input {
+	delegate void KeyPress(int key, int action);
+	public ref class Input abstract sealed{
 	public:
-		delegate void KeyPress(int key, int action);
-		static event Input::KeyPress^ onKeyPress;
-		static event Input::KeyPress^ onClick;
+		static event KeyPress^ onKeyPress;
+		static event KeyPress^ onClick;
 		static Vector2^ mousePosition;
 		static void keyPress(int key, int action) {
 			Input::onKeyPress(key, action);
@@ -211,7 +207,7 @@ namespace Core {
 			Input::onClick(button, action);
 		}
 	};
-	public ref class Camera {
+	public ref class Camera abstract sealed {
 	public:
 		static Vector2^ cameraPosition;
 		static float cameraZoom;
@@ -227,13 +223,64 @@ namespace Core {
 		Input::mousePosition = gcnew Vector2(xpos, ypos);
 	}
 	unsigned int program = 0;
+	namespace internalShaderLocs {
+		int posLocation;
+		int rotLocation;
+		int scaleLocation;
+		int aspectRatioLocation;
+		int cameraZoomLocation;
+		int cameraPositionLocation;
+		int anchorLocation;
+		int anchoredEntityLocation;
+		int scaleWithScreenLocation;
+	}
+	public delegate void GameFunc();
+	private ref class internalFuncs abstract sealed {
+	public:
+		static GameFunc^ updateFunc;
+	};
+	std::function<void()> internalUpdate;
+	namespace internalMisc {
+		GLFWwindow* window;
+	}
+	void draw() {
+		glClear(GL_COLOR_BUFFER_BIT);
+		glUniform1f(internalShaderLocs::cameraZoomLocation, Camera::cameraZoom);
+		glUniform2f(internalShaderLocs::cameraPositionLocation, Camera::cameraPosition->x, Camera::cameraPosition->y);
+		internalUpdate();
+		internalFuncs::updateFunc();
+		glUniform1i(internalShaderLocs::anchoredEntityLocation, 0);
+		glUniform1i(internalShaderLocs::scaleWithScreenLocation, 0);
+		glUniform2f(internalShaderLocs::anchorLocation, 0, 0);
+		for each (auto _e in Entity::renderEntities) {
+			auto e = _e.Value;
+			auto p = _e.Value->parent;
+			glUniform2f(internalShaderLocs::posLocation, e->GetGlobalPosition()->x, e->GetGlobalPosition()->y);
+			glUniform1f(internalShaderLocs::rotLocation, e->GetGlobalRotation());
+			glUniform2f(internalShaderLocs::scaleLocation, e->GetGlobalScale()->x, e->GetGlobalScale()->y);
+			glBindTexture(GL_TEXTURE_2D, e->texture->dataBuffer);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+		glUniform1i(internalShaderLocs::anchoredEntityLocation, 1);
+		for each (auto _e in AnchoredEntity::anchoredRenderEntities) {
+			auto e = _e.Value;
+			glUniform2f(internalShaderLocs::posLocation, e->GetGlobalPosition()->x, e->GetGlobalPosition()->y);
+			glUniform1f(internalShaderLocs::rotLocation, e->GetGlobalRotation());
+			glUniform2f(internalShaderLocs::scaleLocation, e->GetGlobalScale()->x, e->GetGlobalScale()->y);
+			glUniform2f(internalShaderLocs::anchorLocation, e->anchor->x, e->anchor->y);
+			glUniform1i(internalShaderLocs::scaleWithScreenLocation, e->scaleWithScreen);
+			glBindTexture(GL_TEXTURE_2D, e->texture->dataBuffer);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+		glfwSwapBuffers(internalMisc::window);
+	}
 	void resizeWindow(GLFWwindow* window, int width, int height) {
 		glViewport(0, 0, width, height);
 		int aspectRatioLocation = glGetUniformLocation(program, "aspectRatio");
 		glUniform1f(aspectRatioLocation, (float)width / (float)height);
+		draw();
 	}
-	public delegate void GameFunc();
-	void init(GameFunc^ startFunc, GameFunc^ updateFunc, Vector3 clearColor = Vector3(0.2, 0.25, 1)) {
+	void init(GameFunc^ startFunc, GameFunc^ iupdateFunc, std::function<void()> iinternalUpdate, Vector3 clearColor = Vector3(0.2, 0.25, 1)) {
 		//GLFW
 		//Initialize GLFW
 		if (!glfwInit()) {
@@ -242,6 +289,7 @@ namespace Core {
 		//Create and show window
 		int width = 1000, height = 1000;
 		GLFWwindow* window = glfwCreateWindow(width, height, "Game", NULL, NULL);
+		internalMisc::window = window;
 		glfwShowWindow(window);
 		glfwMakeContextCurrent(window);
 		glfwSetFramebufferSizeCallback(window, resizeWindow);
@@ -288,18 +336,18 @@ namespace Core {
 		//Uniforms
 		float rot = 0;
 		float xPos = 1;
-		int posLocation = glGetUniformLocation(program, "position");
-		int rotLocation = glGetUniformLocation(program, "rotation");
-		int scaleLocation = glGetUniformLocation(program, "scale");
-		int aspectRatioLocation = glGetUniformLocation(program, "aspectRatio");
-		int cameraZoomLocation = glGetUniformLocation(program, "cameraZoom");
-		int cameraPositionLocation = glGetUniformLocation(program, "cameraPosition");
-		int anchorLocation = glGetUniformLocation(program, "anchor");
-		int anchoredEntityLocation = glGetUniformLocation(program, "anchoredEntity");
-		int scaleWithScreenLocation = glGetUniformLocation(program, "scaleWithScreen");
-		glUniform1f(aspectRatioLocation, width / height);
-		glUniform1f(cameraZoomLocation, Camera::cameraZoom);
-		glUniform2f(cameraPositionLocation, Camera::cameraPosition->x, Camera::cameraPosition->y);
+		internalShaderLocs::posLocation = glGetUniformLocation(program, "position");
+		internalShaderLocs::rotLocation = glGetUniformLocation(program, "rotation");
+		internalShaderLocs::scaleLocation = glGetUniformLocation(program, "scale");
+		internalShaderLocs::aspectRatioLocation = glGetUniformLocation(program, "aspectRatio");
+		internalShaderLocs::cameraZoomLocation = glGetUniformLocation(program, "cameraZoom");
+		internalShaderLocs::cameraPositionLocation = glGetUniformLocation(program, "cameraPosition");
+		internalShaderLocs::anchorLocation = glGetUniformLocation(program, "anchor");
+		internalShaderLocs::anchoredEntityLocation = glGetUniformLocation(program, "anchoredEntity");
+		internalShaderLocs::scaleWithScreenLocation = glGetUniformLocation(program, "scaleWithScreen");
+		glUniform1f(internalShaderLocs::aspectRatioLocation, width / height);
+		glUniform1f(internalShaderLocs::cameraZoomLocation, Camera::cameraZoom);
+		glUniform2f(internalShaderLocs::cameraPositionLocation, Camera::cameraPosition->x, Camera::cameraPosition->y);
 		//STARTUP
 		unsigned char defaultTextureData[] = { 0xFF,0xFF,0xFF };
 		glClearColor(clearColor.x, clearColor.y, clearColor.z, 1);
@@ -307,35 +355,10 @@ namespace Core {
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		startFunc();
 		//UPDATE
+		internalFuncs::updateFunc = iupdateFunc;
+		internalUpdate = iinternalUpdate;
 		while (!glfwWindowShouldClose(window)) {
-			glClear(GL_COLOR_BUFFER_BIT);
-			glUniform1f(cameraZoomLocation, Camera::cameraZoom);
-			glUniform2f(cameraPositionLocation, Camera::cameraPosition->x, Camera::cameraPosition->y);
-			updateFunc();
-			glUniform1i(anchoredEntityLocation, 0);
-			glUniform1i(scaleWithScreenLocation, 0);
-			glUniform2f(anchorLocation, 0, 0);
-			for each (auto _e in Entity::renderEntities) {
-				auto e = _e.Value;
-				auto p = _e.Value->parent;
-				glUniform2f(posLocation, e->GetGlobalPosition()->x, e->GetGlobalPosition()->y);
-				glUniform1f(rotLocation, e->GetGlobalRotation());
-				glUniform2f(scaleLocation, e->GetGlobalScale()->x, e->GetGlobalScale()->y);
-				glBindTexture(GL_TEXTURE_2D, e->texture->dataBuffer);
-				glDrawArrays(GL_TRIANGLES, 0, 6);
-			}
-			glUniform1i(anchoredEntityLocation, 1);
-			for each (auto _e in AnchoredEntity::anchoredRenderEntities) {
-				auto e = _e.Value;
-				glUniform2f(posLocation, e->GetGlobalPosition()->x, e->GetGlobalPosition()->y);
-				glUniform1f(rotLocation, e->GetGlobalRotation());
-				glUniform2f(scaleLocation, e->GetGlobalScale()->x, e->GetGlobalScale()->y);
-				glUniform2f(anchorLocation, e->anchor->x, e->anchor->y);
-				glUniform1i(scaleWithScreenLocation, e->scaleWithScreen);
-				glBindTexture(GL_TEXTURE_2D, e->texture->dataBuffer);
-				glDrawArrays(GL_TRIANGLES, 0, 6);
-			}
-			glfwSwapBuffers(window);
+			draw();
 			glfwPollEvents();
 		}
 		glfwTerminate();
