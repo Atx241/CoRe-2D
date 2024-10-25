@@ -144,7 +144,10 @@ namespace Core {
 				return position;
 			}
 			else {
-				return gcnew Vector2(*parent->GetGlobalPosition() + Vector2(position->x * parent->GetGlobalScale()->x * cos(-parent->GetGlobalRotation() / (180 / 3.141592)) + position->y * parent->GetGlobalScale()->y * sin(-parent->GetGlobalRotation() / (180 / 3.141592)), position->x * parent->GetGlobalScale()->x * sin(-parent->GetGlobalRotation() / (180 / 3.141592)) + position->y * parent->GetGlobalScale()->y * cos(-parent->GetGlobalRotation() / (180 / 3.141592))));
+				return gcnew Vector2(*parent->GetGlobalPosition() + Vector2(
+					position->x * parent->GetGlobalScale()->x * scale->x * cos(-parent->GetGlobalRotation() / (180 / 3.141592)) + position->y * parent->GetGlobalScale()->y * scale->y * sin(-parent->GetGlobalRotation() / (180 / 3.141592)),
+					position->x * parent->GetGlobalScale()->x * scale->x * sin(-parent->GetGlobalRotation() / (180 / 3.141592)) + position->y * parent->GetGlobalScale()->y * scale->y * cos(-parent->GetGlobalRotation() / (180 / 3.141592))
+				));
 			}
 		}
 		float GetGlobalRotation() {
@@ -193,12 +196,13 @@ namespace Core {
 			return entity;
 		}
 	};
-	delegate void KeyPress(int key, int action);
+	public delegate void KeyPress(int key, int action);
 	public ref class Input abstract sealed{
 	public:
 		static event KeyPress^ onKeyPress;
 		static event KeyPress^ onClick;
 		static Vector2^ mousePosition;
+		static Vector2^ absoluteMousePosition;
 		static void keyPress(int key, int action) {
 			Input::onKeyPress(key, action);
 		}
@@ -211,6 +215,12 @@ namespace Core {
 		static Vector2^ cameraPosition;
 		static float cameraZoom;
 	};
+	public ref class Window abstract sealed {
+	public:
+		static float aspectRatio;
+		static int width;
+		static int height;
+	};
 	void keyPress(GLFWwindow* window, int key, int scancode, int action, int mods) {
 		Input::keyPress(key, action);
 	}
@@ -219,7 +229,8 @@ namespace Core {
 	}
 	void mouseMove(GLFWwindow* window, double xpos, double ypos)
 	{
-		Input::mousePosition = gcnew Vector2(xpos, ypos);
+		Input::mousePosition = gcnew Vector2(((xpos / Window::height) * 2 - 1 * Window::aspectRatio) * Camera::cameraZoom / 2, -((ypos / Window::height) * 2 - 1) * Camera::cameraZoom / 2);
+		Input::absoluteMousePosition = gcnew Vector2(xpos, ypos);
 	}
 	unsigned int program = 0;
 	namespace internalShaderLocs {
@@ -244,7 +255,7 @@ namespace Core {
 	}
 	void draw() {
 		glClear(GL_COLOR_BUFFER_BIT);
-		glUniform1f(internalShaderLocs::cameraZoomLocation, Camera::cameraZoom);
+		glUniform1f(internalShaderLocs::cameraZoomLocation, Camera::cameraZoom - 1);
 		glUniform2f(internalShaderLocs::cameraPositionLocation, Camera::cameraPosition->x, Camera::cameraPosition->y);
 		internalUpdate();
 		internalFuncs::updateFunc();
@@ -277,6 +288,9 @@ namespace Core {
 		glViewport(0, 0, width, height);
 		int aspectRatioLocation = glGetUniformLocation(program, "aspectRatio");
 		glUniform1f(aspectRatioLocation, (float)width / (float)height);
+		Window::aspectRatio = (float)width / (float)height;
+		Window::width = width;
+		Window::height = height;
 		draw();
 	}
 	void init(GameFunc^ startFunc, GameFunc^ iupdateFunc, std::function<void()> iinternalUpdate, Vector3 clearColor = Vector3(0.2, 0.25, 1)) {
@@ -287,6 +301,9 @@ namespace Core {
 		}
 		//Create and show window
 		int width = 1000, height = 1000;
+		Window::width = width;
+		Window::height = height;
+		Window::aspectRatio = (float)width / (float)height;
 		GLFWwindow* window = glfwCreateWindow(width, height, "Game", NULL, NULL);
 		internalMisc::window = window;
 		glfwShowWindow(window);
@@ -352,6 +369,7 @@ namespace Core {
 		glClearColor(clearColor.x, clearColor.y, clearColor.z, 1);
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		Input::mousePosition = gcnew Vector2(0, 0);
 		startFunc();
 		//UPDATE
 		internalFuncs::updateFunc = iupdateFunc;
