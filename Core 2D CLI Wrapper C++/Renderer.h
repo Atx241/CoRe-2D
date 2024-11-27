@@ -6,6 +6,7 @@
 #include <vector>
 #include <functional>
 #include <map>
+#include <ctime>
 namespace Core {
 	struct Vector2 {
 	public:
@@ -342,5 +343,25 @@ namespace Core {
 			glfwPollEvents();
 		}
 		glfwTerminate();
+	}
+	namespace Core {
+		class Utils {
+		public:
+			static void Init(std::function<void()> start, std::function<void()> update, Vector3 clearColor) {
+				prevTime = time(NULL);
+				init(start, update, updateDt, clearColor);
+			}
+			static void Init(std::function<void()> start, std::function<void()> update) {
+				prevTime = time(NULL);
+				init(start, update, updateDt);
+			}
+			static double deltaTime;
+		private:
+			static time_t prevTime;
+			static void updateDt() {
+				deltaTime = std::difftime(time(NULL), prevTime);
+				prevTime = time(NULL);
+			}
+		};
 	}
 }
