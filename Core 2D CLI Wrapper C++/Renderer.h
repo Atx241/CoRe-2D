@@ -7,6 +7,7 @@
 #include <functional>
 #include <map>
 #include <ctime>
+#include <math.h>
 namespace Core {
 	struct Vector2 {
 	public:
@@ -149,10 +150,12 @@ namespace Core {
 		}
 	private:
 		static Entity* createRenderEntity(Entity* entity) {
-			renderEntities.emplace(entity->depth, entity);
+			renderEntities.emplace(entity->depth, *entity);
 			return entity;
 		}
 	};
+	std::map<unsigned int, Entity> Entity::renderEntities = {};
+
 	struct AnchoredEntity : public Entity {
 		AnchoredEntity(Vector2 anchor, Texture texture, Vector2 position, float rotation, Vector2 scale, float depth, bool scaleWithScreen) : Entity(texture,position,rotation,scale,depth)
 		{
@@ -177,10 +180,13 @@ namespace Core {
 			return entity;
 		}
 	};
+	std::map<unsigned int, AnchoredEntity> AnchoredEntity::anchoredRenderEntities = {};
+
+	typedef std::vector<std::function<void(int,int)>> KeyboardAction;
     class Input {
 	public:
-		static std::vector<std::function<void(int,int)>> onKeyPress;
-		static std::vector<std::function<void(int,int)>> onClick;
+		static KeyboardAction onKeyPress;
+		static KeyboardAction onClick;
 		static Vector2 mousePosition;
 		static void keyPress(int key, int action) {
 			for (auto f : onKeyPress) {
@@ -193,11 +199,18 @@ namespace Core {
 			}
 		}
 	};
+	KeyboardAction Input::onKeyPress = {};
+	KeyboardAction Input::onClick = {};
+	Vector2 Input::mousePosition = Vector2(0,0);
+
 	class Camera {
 	public:
 		static Vector2 cameraPosition;
 		static float cameraZoom;
 	};
+	Vector2 Camera::cameraPosition = Vector2(0,0);
+	float Camera::cameraZoom = 1;
+
 	void keyPress(GLFWwindow* window, int key, int scancode, int action, int mods) {
 		Input::keyPress(key, action);
 	}

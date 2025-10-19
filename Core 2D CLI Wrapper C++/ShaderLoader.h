@@ -1,10 +1,9 @@
 #pragma once
-#pragma once
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <GLFW/glfw3.h>
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 bool LoadShader(std::string vPath, std::string fPath, unsigned int& shaderProgram) {
 	std::ifstream vStream;
 	std::ifstream fStream;
