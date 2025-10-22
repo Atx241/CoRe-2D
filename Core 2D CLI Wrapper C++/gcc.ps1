@@ -1,0 +1,1 @@
+g++ Wrapper.cpp glad.c -IC:/cpplibs -shared C:/cpplibs/GLFW/src/glfw3.dll
