@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -120,7 +121,7 @@ namespace Core {
 		Texture texture = Texture(0, 1, 1);
 		Entity* parent;
 		std::vector<Entity*> children = std::vector<Entity*>();
-		static std::map<unsigned int, Entity> renderEntities;
+		static std::map<unsigned int, Entity*> renderEntities;
 		static Entity* CreateRenderEntity(Entity* e) {
 			return createRenderEntity(e);
 		}
@@ -150,11 +151,11 @@ namespace Core {
 		}
 	private:
 		static Entity* createRenderEntity(Entity* entity) {
-			renderEntities.emplace(entity->depth, *entity);
+			renderEntities.emplace(entity->depth, entity);
 			return entity;
 		}
 	};
-	std::map<unsigned int, Entity> Entity::renderEntities = {};
+	std::map<unsigned int, Entity*> Entity::renderEntities = {};
 
 	struct AnchoredEntity : public Entity {
 		AnchoredEntity(Vector2 anchor, Texture texture, Vector2 position, float rotation, Vector2 scale, float depth, bool scaleWithScreen) : Entity(texture,position,rotation,scale,depth)
@@ -170,17 +171,17 @@ namespace Core {
 	public:
 		Vector2 anchor = Vector2(0,0);
 		bool scaleWithScreen = false;
-		static AnchoredEntity CreateRenderEntity(AnchoredEntity e) {
+		static AnchoredEntity* CreateRenderEntity(AnchoredEntity* e) {
 			return createRenderEntity(e);
 		}
-		static std::map<unsigned int, AnchoredEntity> anchoredRenderEntities;
+		static std::map<unsigned int, AnchoredEntity*> anchoredRenderEntities;
 	private:
-		static AnchoredEntity createRenderEntity(AnchoredEntity entity) {
-			anchoredRenderEntities.emplace(entity.depth, entity);
+		static AnchoredEntity* createRenderEntity(AnchoredEntity* entity) {
+			anchoredRenderEntities.emplace(entity->depth, entity);
 			return entity;
 		}
 	};
-	std::map<unsigned int, AnchoredEntity> AnchoredEntity::anchoredRenderEntities = {};
+	std::map<unsigned int, AnchoredEntity*> AnchoredEntity::anchoredRenderEntities = {};
 
 	typedef std::vector<std::function<void(int,int)>> KeyboardAction;
     class Input {
@@ -248,7 +249,7 @@ namespace Core {
 		glUniform1i(internalShaderLocs::scaleWithScreenLocation, 0);
 		glUniform2f(internalShaderLocs::anchorLocation, 0, 0);
 		for (auto _e : Entity::renderEntities) {
-			auto e = _e.second;
+			auto e = *_e.second;
 			glUniform2f(internalShaderLocs::posLocation, e.GetGlobalPosition().x, e.GetGlobalPosition().y);
 			glUniform1f(internalShaderLocs::rotLocation, e.GetGlobalRotation());
 			glUniform2f(internalShaderLocs::scaleLocation, e.GetGlobalScale().x, e.GetGlobalScale().y);
@@ -257,7 +258,7 @@ namespace Core {
 		}
 		glUniform1i(internalShaderLocs::anchoredEntityLocation, 1);
 		for (auto _e : AnchoredEntity::anchoredRenderEntities) {
-			auto e = _e.second;
+			auto e = *_e.second;
 			glUniform2f(internalShaderLocs::posLocation, e.GetGlobalPosition().x, e.GetGlobalPosition().y);
 			glUniform1f(internalShaderLocs::rotLocation, e.GetGlobalRotation());
 			glUniform2f(internalShaderLocs::scaleLocation, e.GetGlobalScale().x, e.GetGlobalScale().y);
@@ -378,3 +379,5 @@ namespace Core {
 		};
 	}
 }
+double Core::Core::Utils::deltaTime = 0.0;
+time_t Core::Core::Utils::prevTime = time(NULL);
