@@ -1,5 +1,4 @@
 #pragma once
-#include <cstddef>
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -98,6 +97,7 @@ namespace Core {
 	public:
 		Entity(Texture texture, Vector2 position, float rotation, Vector2 scale, float depth)
 		{
+			parent = nullptr;
 			this->position = position;
 			this->rotation = rotation;
 			this->scale = scale;
@@ -369,10 +369,16 @@ namespace Core {
 				prevTime = time(NULL);
 				init(start, update, updateDt);
 			}
+			static void SetVSync(bool value) {
+				vSync = value;
+				glfwSwapInterval(vSync);
+			}
 			static double deltaTime;
+			static bool vSync;
 		private:
 			static time_t prevTime;
 			static void updateDt() {
+				std::cout << deltaTime;
 				deltaTime = std::difftime(time(NULL), prevTime);
 				prevTime = time(NULL);
 			}
