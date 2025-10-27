@@ -6,7 +6,7 @@
 #include <vector>
 #include <functional>
 #include <map>
-#include <ctime>
+#include <chrono>
 #include <math.h>
 namespace Core {
 	struct Vector2 {
@@ -130,7 +130,7 @@ namespace Core {
 				return position;
 			}
 			else {
-				return Vector2(parent->GetGlobalPosition() + Vector2(position.x * parent->GetGlobalScale().x * cos(-parent->GetGlobalRotation() / (180 / 3.141592)) + position.y * parent->GetGlobalScale().y * sin(-parent->GetGlobalRotation() / (180 / 3.141592)), position.x * parent->GetGlobalScale().x * sin(-parent->GetGlobalRotation() / (180 / 3.141592)) + position.y * parent->GetGlobalScale().y * cos(-parent->GetGlobalRotation() / (180 / 3.141592))));
+				return Vector2(parent->GetGlobalPosition() + Vector2((position.x * parent->GetGlobalScale().x * cos(-parent->GetGlobalRotation() / (180 / 3.141592))) - (position.y * parent->GetGlobalScale().y * sin(-parent->GetGlobalRotation() / (180 / 3.141592))), (position.x * parent->GetGlobalScale().x * sin(-parent->GetGlobalRotation() / (180 / 3.141592))) + (position.y * parent->GetGlobalScale().y * cos(-parent->GetGlobalRotation() / (180 / 3.141592)))));
 			}
 		}
 		float GetGlobalRotation() {
@@ -269,12 +269,61 @@ namespace Core {
 		}
 		glfwSwapBuffers(internalMisc::window);
 	}
+	void init(std::function<void()>, std::function<void()>, std::function<void()>);
+	void init(std::function<void()>, std::function<void()>, std::function<void()>, Vector3);
+	class Utils {
+		public:
+			static void Init(std::function<void()> start, std::function<void()> update, Vector3 clearColor) {
+				init(start, update, updateDt, clearColor);
+			}
+			static void Init(std::function<void()> start, std::function<void()> update) {
+				init(start, update, updateDt);
+			}
+			static void SetVSync(bool value) {
+				vSync = value;
+				glfwSwapInterval(vSync);
+			}
+			static GLFWwindow* GetWindowHandle() {
+				return internalMisc::window;
+			}
+			static void SetFullscreen(bool value) {
+				int mCount;
+				auto ms = glfwGetMonitors(&mCount);
+				if (internalMisc::window == nullptr) {
+					std::cout << "Window handle not initialized!";
+					return;
+				}
+				if (value) {
+					int width;
+					int height;
+					int x;
+					int y;
+					glfwGetMonitorWorkarea(ms[0], &x, &y, &width, &height);
+					glfwSetWindowMonitor(internalMisc::window, ms[0], x, y, width, height, 60);
+				}
+			}
+			static double deltaTime;
+			static bool vSync;
+		private:
+			static std::chrono::time_point<std::chrono::steady_clock> prevTime;
+			static void updateDt() {
+				auto now = std::chrono::steady_clock::now();
+				deltaTime = std::chrono::duration<double>(now - prevTime).count();
+				prevTime = now;
+			}
+	};
+	double Utils::deltaTime = 0.0;
+	std::chrono::time_point<std::chrono::steady_clock> Utils::prevTime = std::chrono::steady_clock::now();
+	bool Utils::vSync = true;
+
 	void resizeWindow(GLFWwindow* window, int width, int height) {
 		glViewport(0, 0, width, height);
 		int aspectRatioLocation = glGetUniformLocation(program, "aspectRatio");
 		glUniform1f(aspectRatioLocation, (float)width / (float)height);
 		draw();
+		glfwSwapInterval(Utils::vSync);
 	}
+
 	void init(std::function<void()> startFunc, std::function<void()> iupdateFunc, std::function<void()> iinternalUpdate, Vector3 clearColor = Vector3(0.2, 0.25, 1)) {
 		//GLFW
 		//Initialize GLFW
@@ -340,7 +389,7 @@ namespace Core {
 		internalShaderLocs::anchorLocation = glGetUniformLocation(program, "anchor");
 		internalShaderLocs::anchoredEntityLocation = glGetUniformLocation(program, "anchoredEntity");
 		internalShaderLocs::scaleWithScreenLocation = glGetUniformLocation(program, "scaleWithScreen");
-		glUniform1f(internalShaderLocs::aspectRatioLocation, width / height);
+		glUniform1f(internalShaderLocs::aspectRatioLocation, (float)width / height);
 		glUniform1f(internalShaderLocs::cameraZoomLocation, Camera::cameraZoom);
 		glUniform2f(internalShaderLocs::cameraPositionLocation, Camera::cameraPosition.x, Camera::cameraPosition.y);
 		//STARTUP
@@ -358,32 +407,4 @@ namespace Core {
 		}
 		glfwTerminate();
 	}
-	namespace Core {
-		class Utils {
-		public:
-			static void Init(std::function<void()> start, std::function<void()> update, Vector3 clearColor) {
-				prevTime = time(NULL);
-				init(start, update, updateDt, clearColor);
-			}
-			static void Init(std::function<void()> start, std::function<void()> update) {
-				prevTime = time(NULL);
-				init(start, update, updateDt);
-			}
-			static void SetVSync(bool value) {
-				vSync = value;
-				glfwSwapInterval(vSync);
-			}
-			static double deltaTime;
-			static bool vSync;
-		private:
-			static time_t prevTime;
-			static void updateDt() {
-				std::cout << deltaTime;
-				deltaTime = std::difftime(time(NULL), prevTime);
-				prevTime = time(NULL);
-			}
-		};
-	}
 }
-double Core::Core::Utils::deltaTime = 0.0;
-time_t Core::Core::Utils::prevTime = time(NULL);
